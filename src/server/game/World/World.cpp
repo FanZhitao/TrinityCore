@@ -78,6 +78,9 @@
 #include "GameTime.h"
 #include "UpdateTime.h"
 
+#include "../../plugins/playerbot/PlayerbotAIConfig.h"
+#include "../../plugins/playerbot/RandomPlayerbotMgr.h"
+
 TC_GAME_API std::atomic<bool> World::m_stopEvent(false);
 TC_GAME_API uint8 World::m_ExitCode = SHUTDOWN_EXIT_CODE;
 
@@ -2134,6 +2137,10 @@ void World::Update(uint32 diff)
         sAuctionMgr->Update();
     }
 
+    // playerbot mod
+    sRandomPlayerbotMgr.UpdateAI(diff);
+    sRandomPlayerbotMgr.UpdateSessions(diff);
+
     if (m_timers[WUPDATE_AUCTIONS_PENDING].Passed())
     {
         m_timers[WUPDATE_AUCTIONS_PENDING].Reset();
@@ -2717,6 +2724,10 @@ void World::ShutdownServ(uint32 time, uint32 options, uint8 exitcode, const std:
         m_ShutdownTimer = time;
         ShutdownMsg(true, nullptr, reason);
     }
+
+    // playerbot mod
+    sRandomPlayerbotMgr.LogoutAllBots();
+    // end of playerbot mod
 
     sScriptMgr->OnShutdownInitiate(ShutdownExitCode(exitcode), ShutdownMask(options));
 }

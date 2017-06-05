@@ -29,6 +29,9 @@
 
 class TC_COMMON_API ConfigMgr
 {
+// playerbot mod
+public:
+// end of playerbot mod
     ConfigMgr() = default;
     ConfigMgr(ConfigMgr const&) = delete;
     ConfigMgr& operator=(ConfigMgr const&) = delete;
