@@ -88,6 +88,7 @@ bool QueryItemUsageAction::QueryItemUsage(ItemTemplate const *item)
 
 void QueryItemUsageAction::QueryItemPrice(ItemTemplate const *item)
 {
+	/*
     if (!sRandomPlayerbotMgr.IsRandomBot(bot))
         return;
 
@@ -119,6 +120,7 @@ void QueryItemUsageAction::QueryItemPrice(ItemTemplate const *item)
         out << "Will buy for " << chat->formatMoney(buyPrice);
         ai->TellMaster(out.str());
     }
+	*/
 }
 
 void QueryItemUsageAction::QueryItemsUsage(ItemIds items)

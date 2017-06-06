@@ -228,13 +228,14 @@ void SuggestWhatToDoAction::trade()
     ItemTemplate const* proto = sObjectMgr->GetItemTemplate(item);
     if (!proto)
         return;
-
+/*
     uint32 price = auctionbot.GetSellPrice(proto) * sRandomPlayerbotMgr.GetSellMultiplier(bot) * count;
     if (!price)
         return;
 
     ostringstream out; out << "Selling " << chat->formatItem(proto, count) << " for " << chat->formatMoney(price);
     spam(out.str());
+*/
 }
 
 void SuggestWhatToDoAction::spam(string msg)

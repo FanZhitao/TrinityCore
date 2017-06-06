@@ -4,6 +4,7 @@
 #include "PlayerbotFactory.h"
 #include "RandomPlayerbotMgr.h"
 
+#include "CharacterCache.h" // per 59ce3d6
 
 class LoginQueryHolder;
 class CharacterHandler;
@@ -98,7 +99,7 @@ void PlayerbotHolder::OnBotLogin(Player * const bot)
         for (Group::MemberSlotList::const_iterator i = slots.begin(); i != slots.end(); ++i)
         {
             ObjectGuid member = i->guid;
-            uint32 account = sCharacterCache->GetCharacterNameByGuid(member); // per 59ce3d6
+            uint32 account = sCharacterCache->GetCharacterAccountIdByGuid(member); // per 59ce3d6
             if (!sPlayerbotAIConfig.IsInRandomAccountList(account))
             {
                 groupValid = true;
@@ -125,7 +126,7 @@ string PlayerbotHolder::ProcessBotCommand(string cmd, ObjectGuid guid, bool admi
     if (!sPlayerbotAIConfig.enabled || guid.IsEmpty())
         return "bot system is disabled";
 
-    uint32 botAccount = sCharacterCache->GetCharacterNameByGuid(guid); // per 59ce3d6
+    uint32 botAccount = sCharacterCache->GetCharacterAccountIdByGuid(guid); // per 59ce3d6
     bool isRandomBot = sRandomPlayerbotMgr.IsRandomBot(guid);
     bool isRandomAccount = sPlayerbotAIConfig.IsInRandomAccountList(botAccount);
     bool isMasterAccount = (masterAccountId == botAccount);
@@ -350,7 +351,7 @@ list<string> PlayerbotHolder::HandlePlayerbotCommand(char const* args, Player* m
         ostringstream out;
         out << cmdStr << ": " << bot << " - ";
 
-        ObjectGuid member = sObjectMgr->GetPlayerGUIDByName(bot);
+        ObjectGuid member = sCharacterCache->GetCharacterGuidByName(bot);
         if (!member)
         {
             out << "character not found";

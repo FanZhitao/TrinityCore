@@ -59,7 +59,8 @@ string WhoAction::QueryTrade(string text)
     for (list<Item*>::iterator i = items.begin(); i != items.end(); ++i)
     {
         Item* sell = *i;
-        int32 sellPrice = auctionbot.GetSellPrice(sell->GetTemplate()) * sRandomPlayerbotMgr.GetSellMultiplier(bot) * sell->GetCount();
+//        int32 sellPrice = auctionbot.GetSellPrice(sell->GetTemplate()) * sRandomPlayerbotMgr.GetSellMultiplier(bot) * sell->GetCount();
+		int32 sellPrice = 0;
         if (!sellPrice)
             continue;
 

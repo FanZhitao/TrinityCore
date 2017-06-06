@@ -12,6 +12,8 @@
 //#include "../../plugins/ahbot/AhBotConfig.h"
 #include "RandomItemMgr.h"
 
+#include "CharacterCache.h" // per 59ce3d6
+
 char * strstri (const char* str1, const char* str2);
 
 enum GuildTaskType
@@ -150,7 +152,7 @@ uint32 GuildTaskMgr::CreateTask(uint32 owner, uint32 guildId)
 
 bool GuildTaskMgr::CreateItemTask(uint32 owner, uint32 guildId)
 {
-    Player* player = sObjectMgr->GetPlayerByLowGUID(owner);
+    Player* player = ObjectAccessor::FindPlayerByLowGUID(owner); // per 59ce3d6
     if (!player)
         return false;
 
@@ -175,7 +177,7 @@ bool GuildTaskMgr::CreateItemTask(uint32 owner, uint32 guildId)
 
 bool GuildTaskMgr::CreateKillTask(uint32 owner, uint32 guildId)
 {
-    Player* player = sObjectMgr->GetPlayerByLowGUID(owner);
+    Player* player = ObjectAccessor::FindPlayerByLowGUID(owner); // per 59ce3d6
     if (!player)
         return false;
 
@@ -221,11 +223,11 @@ bool GuildTaskMgr::SendAdvertisement(uint32 owner, uint32 guildId)
     if (!guild)
         return false;
 
-    Player* player = sObjectMgr->GetPlayerByLowGUID(owner);
+	Player* player = ObjectAccessor::FindPlayerByLowGUID(owner); // per 59ce3d6
     if (!player)
         return false;
 
-    Player* leader = sObjectMgr->GetPlayerByLowGUID(guild->GetLeaderGUID());
+    Player* leader = ObjectAccessor::FindPlayerByLowGUID(guild->GetLeaderGUID()); // per 59ce3d6
     if (!leader)
         return false;
 
@@ -266,8 +268,8 @@ string formatTime(uint32 secs)
 bool GuildTaskMgr::SendItemAdvertisement(uint32 itemId, uint32 owner, uint32 guildId, uint32 validIn)
 {
     Guild *guild = sGuildMgr->GetGuildById(guildId);
-    Player* player = sObjectMgr->GetPlayerByLowGUID(owner);
-    Player* leader = sObjectMgr->GetPlayerByLowGUID(guild->GetLeaderGUID());
+    Player* player = ObjectAccessor::FindPlayerByLowGUID(owner); // per 59ce3d6
+    Player* leader = ObjectAccessor::FindPlayerByLowGUID(guild->GetLeaderGUID()); // per 59ce3d6
 
     ItemTemplate const* proto = sObjectMgr->GetItemTemplate(itemId);
     if (!proto)
@@ -302,8 +304,8 @@ bool GuildTaskMgr::SendItemAdvertisement(uint32 itemId, uint32 owner, uint32 gui
 bool GuildTaskMgr::SendKillAdvertisement(uint32 creatureId, uint32 owner, uint32 guildId, uint32 validIn)
 {
     Guild *guild = sGuildMgr->GetGuildById(guildId);
-    Player* player = sObjectMgr->GetPlayerByLowGUID(owner);
-    Player* leader = sObjectMgr->GetPlayerByLowGUID(guild->GetLeaderGUID());
+    Player* player = ObjectAccessor::FindPlayerByLowGUID(owner); // per 59ce3d6
+    Player* leader = ObjectAccessor::FindPlayerByLowGUID(guild->GetLeaderGUID()); // per 59ce3d6
 
     CreatureTemplate const* proto = sObjectMgr->GetCreatureTemplate(creatureId);
     if (!proto)
@@ -335,11 +337,11 @@ bool GuildTaskMgr::SendThanks(uint32 owner, uint32 guildId)
     if (!guild)
         return false;
 
-    Player* player = sObjectMgr->GetPlayerByLowGUID(owner);
+    Player* player = ObjectAccessor::FindPlayerByLowGUID(owner); // per 59ce3d6
     if (!player)
         return false;
 
-    Player* leader = sObjectMgr->GetPlayerByLowGUID(guild->GetLeaderGUID());
+    Player* leader = ObjectAccessor::FindPlayerByLowGUID(guild->GetLeaderGUID()); // per 59ce3d6
     if (!leader)
         return false;
 
@@ -506,7 +508,7 @@ bool GuildTaskMgr::HandleConsoleCommand(ChatHandler* handler, char const* args)
     if (cmd.find("stats ") != string::npos)
     {
         string charName = cmd.substr(cmd.find("stats ") + 6);
-        ObjectGuid guid = sObjectMgr->GetPlayerGUIDByName(charName);
+        ObjectGuid guid = sCharacterCache->GetCharacterGuidByName(charName); // per 59ce3d6
         if (!guid)
         {
             sLog->outMessage("gtask", LOG_LEVEL_ERROR, "Player %s not found", charName.c_str());
@@ -572,7 +574,7 @@ bool GuildTaskMgr::HandleConsoleCommand(ChatHandler* handler, char const* args)
     if (cmd.find("reward ") != string::npos)
     {
         string charName = cmd.substr(cmd.find("reward ") + 7);
-        ObjectGuid guid = sObjectMgr->GetPlayerGUIDByName(charName);
+        ObjectGuid guid = sCharacterCache->GetCharacterGuidByName(charName); // per 59ce3d6
         if (!guid)
         {
             sLog->outMessage("gtask", LOG_LEVEL_ERROR, "Player %s not found", charName.c_str());
@@ -632,8 +634,10 @@ void GuildTaskMgr::CheckItemTask(uint32 itemId, uint32 obtained, Player* ownerPl
             return;
 
         uint32 money = GetTaskValue(owner, guildId, "payment");
-        SetTaskValue(owner, guildId, "payment", money + auctionbot.GetBuyPrice(proto) * obtained,
-                sPlayerbotAIConfig.maxGuildTaskRewardTime);
+   //     SetTaskValue(owner, guildId, "payment", money + auctionbot.GetBuyPrice(proto) * obtained,
+   //             sPlayerbotAIConfig.maxGuildTaskRewardTime);
+		SetTaskValue(owner, guildId, "payment", money,
+			sPlayerbotAIConfig.maxGuildTaskRewardTime);
     }
 
     uint32 count = GetTaskValue(owner, guildId, "itemCount");
@@ -661,11 +665,11 @@ bool GuildTaskMgr::Reward(uint32 owner, uint32 guildId)
     if (!guild)
         return false;
 
-    Player* player = sObjectMgr->GetPlayerByLowGUID(owner);
+    Player* player = ObjectAccessor::FindPlayerByLowGUID(owner); // per 59ce3d6
     if (!player)
         return false;
 
-    Player* leader = sObjectMgr->GetPlayerByLowGUID(guild->GetLeaderGUID());
+    Player* leader = ObjectAccessor::FindPlayerByLowGUID(guild->GetLeaderGUID()); // per 59ce3d6
     if (!leader)
         return false;
 

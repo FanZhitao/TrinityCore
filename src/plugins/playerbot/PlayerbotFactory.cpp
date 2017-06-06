@@ -1087,17 +1087,17 @@ void PlayerbotFactory::InitAvailableSpells()
             if (!tSpell)
                 continue;
 
-            if (!tSpell->learnedSpell[0] && !bot->IsSpellFitByClassAndRace(tSpell->learnedSpell[0]))
+            if (!tSpell->ReqAbility[0] && !bot->IsSpellFitByClassAndRace(tSpell->ReqAbility[0]))
                 continue;
 
             TrainerSpellState state = bot->GetTrainerSpellState(tSpell);
             if (state != TRAINER_SPELL_GREEN)
                 continue;
 
-            if (tSpell->learnedSpell)
-                bot->LearnSpell(tSpell->learnedSpell[0], false);
+            if (tSpell->ReqAbility)
+                bot->LearnSpell(tSpell->ReqAbility[0], false);
             else
-                ai->CastSpell(tSpell->spell, bot);
+                ai->CastSpell(tSpell->SpellID, bot);
         }
     }
 }
@@ -1191,7 +1191,7 @@ ObjectGuid PlayerbotFactory::GetRandomBot()
         {
             Field* fields = result->Fetch();
             ObjectGuid guid = ObjectGuid(HighGuid::Player, fields[0].GetUInt32());
-            if (!sObjectMgr->GetPlayerByLowGUID(guid))
+            if (!ObjectAccessor::FindPlayerByLowGUID(guid))
                 guids.push_back(guid);
         } while (result->NextRow());
     }
@@ -1203,13 +1203,13 @@ ObjectGuid PlayerbotFactory::GetRandomBot()
     return guids[index];
 }
 
-void AddPrevQuests(uint32 questId, list<uint32>& questIds)
+void AddDependentPreviousQuests(uint32 questId, list<uint32>& questIds)
 {
     Quest const *quest = sObjectMgr->GetQuestTemplate(questId);
-    for (Quest::PrevQuests::const_iterator iter = quest->prevQuests.begin(); iter != quest->prevQuests.end(); ++iter)
+    for (auto iter = quest->DependentPreviousQuests.begin(); iter != quest->DependentPreviousQuests.end(); ++iter)
     {
-        uint32 prevId = abs(*iter);
-        AddPrevQuests(prevId, questIds);
+        uint32 prevId = *iter;
+        AddDependentPreviousQuests(prevId, questIds);
         questIds.push_back(prevId);
     }
 }
@@ -1228,7 +1228,7 @@ void PlayerbotFactory::InitQuests()
                 quest->IsDailyOrWeekly() || quest->IsRepeatable() || quest->IsMonthly())
             continue;
 
-        AddPrevQuests(questId, questIds);
+        AddDependentPreviousQuests(questId, questIds);
         questIds.push_back(questId);
     }
 
@@ -1534,7 +1534,8 @@ void PlayerbotFactory::InitInventoryTrade()
     {
     case ITEM_QUALITY_NORMAL:
         count = proto->GetMaxStackSize();
-        stacks = urand(1, 7) / auctionbot.GetRarityPriceMultiplier(proto);
+        //stacks = urand(1, 7) / auctionbot.GetRarityPriceMultiplier(proto);
+		stacks = urand(1, 7);
         break;
     case ITEM_QUALITY_UNCOMMON:
         stacks = 1;
@@ -1732,6 +1733,9 @@ void PlayerbotFactory::InitGuild()
         return;
     }
 
-    if (guild->GetMemberCount() < 10)
-        guild->AddMember(bot->GetGUID(), urand(GR_OFFICER, GR_INITIATE));
+	if (guild->GetMemberCount() < 10)
+	{
+		SQLTransaction trans(nullptr);
+		guild->AddMember(trans, bot->GetGUID(), urand(GR_OFFICER, GR_INITIATE));
+	}
 }

@@ -129,20 +129,21 @@ RandomItemList RandomItemMgr::Query(RandomItemType type)
         if (proto->Duration & 0x80000000)
             continue;
 
-        if (sAhBotConfig.ignoreItemIds.find(proto->ItemId) != sAhBotConfig.ignoreItemIds.end())
-            continue;
+//        if (sAhBotConfig.ignoreItemIds.find(proto->ItemId) != sAhBotConfig.ignoreItemIds.end())
+//            continue;
 
         if (strstri(proto->Name1.c_str(), "qa") || strstri(proto->Name1.c_str(), "test") || strstri(proto->Name1.c_str(), "deprecated"))
             continue;
 
-        if ((proto->RequiredLevel && proto->RequiredLevel > sAhBotConfig.maxRequiredLevel) || proto->ItemLevel > sAhBotConfig.maxItemLevel)
+//        if ((proto->RequiredLevel && proto->RequiredLevel > sAhBotConfig.maxRequiredLevel) || proto->ItemLevel > sAhBotConfig.maxItemLevel)
+		if (proto->RequiredLevel)
             continue;
 
         if (predicates[type] && !predicates[type]->Apply(proto))
             continue;
 
-        if (!auctionbot.GetSellPrice(proto))
-            continue;
+//        if (!auctionbot.GetSellPrice(proto))
+//            continue;
 
         items.push_back(itemId);
     }

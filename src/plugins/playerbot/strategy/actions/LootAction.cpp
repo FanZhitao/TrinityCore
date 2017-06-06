@@ -252,7 +252,8 @@ bool StoreLootAction::Execute(Event event)
             ItemTemplate const *proto = sObjectMgr->GetItemTemplate(itemid);
             if (proto)
             {
-                uint32 price = itemcount * auctionbot.GetSellPrice(proto) * sRandomPlayerbotMgr.GetSellMultiplier(bot) + gold;
+                //uint32 price = itemcount * auctionbot.GetSellPrice(proto) * sRandomPlayerbotMgr.GetSellMultiplier(bot) + gold;
+				uint32 price = 0;
                 uint32 lootAmount = sRandomPlayerbotMgr.GetLootAmount(bot);
                 if (bot->GetGroup() && price)
                 {
