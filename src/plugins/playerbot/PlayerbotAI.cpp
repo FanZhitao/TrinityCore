@@ -720,7 +720,7 @@ bool PlayerbotAI::TellMaster(string text, PlayerbotSecurityLevel securityLevel)
 
     if (!bot->isMoving() && !bot->IsInCombat() && bot->GetMapId() == master->GetMapId())
     {
-        if (!bot->isInFront(master, M_PI / 2))
+        if (!bot->isInFront(master, (float)M_PI / 2))
             bot->SetFacingTo(bot->GetAngle(master));
 
         bot->HandleEmoteCommand(EMOTE_ONESHOT_TALK);
@@ -987,7 +987,7 @@ bool PlayerbotAI::CastSpell(uint32 spellId, Unit* target)
     }
 
 
-    if (!bot->isInFront(faceTo, M_PI / 2))
+    if (!bot->isInFront(faceTo, (float)M_PI / 2))
     {
         bot->SetFacingTo(bot->GetAngle(faceTo));
         delete spell;

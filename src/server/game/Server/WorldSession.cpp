@@ -1547,3 +1547,16 @@ uint32 WorldSession::DosProtection::GetMaxPacketCounterAllowed(uint16 opcode) co
 
     return maxPacketCounterAllowed;
 }
+
+// playerbot mod
+void WorldSession::HandleBotPackets()
+{
+	WorldPacket* packet;
+	while (_recvQueue.next(packet))
+	{
+		const ClientOpcodeHandler* handler = opcodeTable[(Opcodes)packet->GetOpcode()];
+		handler->Call(this, *packet);
+		delete packet;
+	}
+}
+// end of playerbot mod
