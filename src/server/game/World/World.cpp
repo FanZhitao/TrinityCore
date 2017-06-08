@@ -1992,6 +1992,14 @@ void World::SetInitialWorldSettings()
 
     if (uint32 realmId = sConfigMgr->GetIntDefault("RealmID", 0)) // 0 reserved for auth
         sLog->SetRealmId(realmId);
+
+    // playerbot mod
+    //TC_LOG_INFO("server.loading", "Initializing AuctionHouseBot...");
+    //auctionbot.Init();
+
+    TC_LOG_INFO("server.loading", "Initializing PlayerbotBot Config...");
+    sPlayerbotAIConfig.Initialize();
+    // end of playerbot mod
 }
 
 void World::DetectDBCLang()
