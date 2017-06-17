@@ -461,7 +461,7 @@ list<uint32> RandomPlayerbotMgr::GetBots()
     list<uint32> bots;
 
     QueryResult results = CharacterDatabase.Query(
-            "select bot from ai_playerbot_random_bots where owner = 0 and event = 'add'");
+            "SELECT bot FROM characters.ai_playerbot_random_bots WHERE owner = 0 and event = 'add'");
 
     if (results)
     {
