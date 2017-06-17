@@ -144,12 +144,9 @@ bool GameObject::AIM_Initialize()
     return true;
 }
 
-std::string GameObject::GetAIName() const
+std::string const& GameObject::GetAIName() const
 {
-    if (GameObjectTemplate const* got = sObjectMgr->GetGameObjectTemplate(GetEntry()))
-        return got->AIName;
-
-    return "";
+    return sObjectMgr->GetGameObjectTemplate(GetEntry())->AIName;
 }
 
 void GameObject::CleanupsBeforeDelete(bool finalCleanup)
@@ -1253,7 +1250,7 @@ void GameObject::Use(Unit* user)
     if (Player* playerUser = user->ToPlayer())
     {
         playerUser->PlayerTalkClass->ClearMenus();
-        if (AI()->GossipHello(playerUser, false))
+        if (AI()->GossipHello(playerUser))
             return;
     }
 

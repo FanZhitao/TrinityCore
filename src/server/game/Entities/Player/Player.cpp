@@ -505,7 +505,7 @@ Player::Player(WorldSession* session): Unit(true)
 
     m_runes = nullptr;
 
-    m_lastFallTime = 0;
+    m_lastFallTimeClient = 0;
     m_lastFallZ = 0;
 
     m_grantableLevels = 0;
@@ -711,56 +711,6 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
     SetUInt32Value(PLAYER_FIELD_COINAGE, sWorld->getIntConfig(CONFIG_START_PLAYER_MONEY));
     SetHonorPoints(sWorld->getIntConfig(CONFIG_START_HONOR_POINTS));
     SetArenaPoints(sWorld->getIntConfig(CONFIG_START_ARENA_POINTS));
-
-    // start with every map explored
-    if (sWorld->getBoolConfig(CONFIG_START_ALL_EXPLORED))
-    {
-        for (uint8 i=0; i<PLAYER_EXPLORED_ZONES_SIZE; i++)
-            SetFlag(PLAYER_EXPLORED_ZONES_1+i, 0xFFFFFFFF);
-    }
-
-    //Reputations if "StartAllReputation" is enabled, -- @todo Fix this in a better way
-    if (sWorld->getBoolConfig(CONFIG_START_ALL_REP))
-    {
-        GetReputationMgr().SetReputation(sFactionStore.LookupEntry(942), 42999);
-        GetReputationMgr().SetReputation(sFactionStore.LookupEntry(935), 42999);
-        GetReputationMgr().SetReputation(sFactionStore.LookupEntry(936), 42999);
-        GetReputationMgr().SetReputation(sFactionStore.LookupEntry(1011), 42999);
-        GetReputationMgr().SetReputation(sFactionStore.LookupEntry(970), 42999);
-        GetReputationMgr().SetReputation(sFactionStore.LookupEntry(967), 42999);
-        GetReputationMgr().SetReputation(sFactionStore.LookupEntry(989), 42999);
-        GetReputationMgr().SetReputation(sFactionStore.LookupEntry(932), 42999);
-        GetReputationMgr().SetReputation(sFactionStore.LookupEntry(934), 42999);
-        GetReputationMgr().SetReputation(sFactionStore.LookupEntry(1038), 42999);
-        GetReputationMgr().SetReputation(sFactionStore.LookupEntry(1077), 42999);
-
-        // Factions depending on team, like cities and some more stuff
-        switch (GetTeam())
-        {
-        case ALLIANCE:
-            GetReputationMgr().SetReputation(sFactionStore.LookupEntry(72), 42999);
-            GetReputationMgr().SetReputation(sFactionStore.LookupEntry(47), 42999);
-            GetReputationMgr().SetReputation(sFactionStore.LookupEntry(69), 42999);
-            GetReputationMgr().SetReputation(sFactionStore.LookupEntry(930), 42999);
-            GetReputationMgr().SetReputation(sFactionStore.LookupEntry(730), 42999);
-            GetReputationMgr().SetReputation(sFactionStore.LookupEntry(978), 42999);
-            GetReputationMgr().SetReputation(sFactionStore.LookupEntry(54), 42999);
-            GetReputationMgr().SetReputation(sFactionStore.LookupEntry(946), 42999);
-            break;
-        case HORDE:
-            GetReputationMgr().SetReputation(sFactionStore.LookupEntry(76), 42999);
-            GetReputationMgr().SetReputation(sFactionStore.LookupEntry(68), 42999);
-            GetReputationMgr().SetReputation(sFactionStore.LookupEntry(81), 42999);
-            GetReputationMgr().SetReputation(sFactionStore.LookupEntry(911), 42999);
-            GetReputationMgr().SetReputation(sFactionStore.LookupEntry(729), 42999);
-            GetReputationMgr().SetReputation(sFactionStore.LookupEntry(941), 42999);
-            GetReputationMgr().SetReputation(sFactionStore.LookupEntry(530), 42999);
-            GetReputationMgr().SetReputation(sFactionStore.LookupEntry(947), 42999);
-            break;
-        default:
-            break;
-        }
-    }
 
     // Played time
     m_Last_tick = time(nullptr);
@@ -1087,7 +1037,7 @@ void Player::HandleDrowning(uint32 time_diff)
     }
 
     // In dark water
-    if (m_MirrorTimerFlags & UNDERWARER_INDARKWATER)
+    if (m_MirrorTimerFlags & UNDERWATER_INDARKWATER)
     {
         // Fatigue timer not activated - activate it
         if (m_MirrorTimer[FATIGUE_TIMER] == DISABLED_MIRROR_TIMER)
@@ -1110,7 +1060,7 @@ void Player::HandleDrowning(uint32 time_diff)
                 else if (HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_GHOST))       // Teleport ghost to graveyard
                     RepopAtGraveyard();
             }
-            else if (!(m_MirrorTimerFlagsLast & UNDERWARER_INDARKWATER))
+            else if (!(m_MirrorTimerFlagsLast & UNDERWATER_INDARKWATER))
                 SendMirrorTimer(FATIGUE_TIMER, getMaxTimer(FATIGUE_TIMER), m_MirrorTimer[FATIGUE_TIMER], -1);
         }
     }
@@ -1120,7 +1070,7 @@ void Player::HandleDrowning(uint32 time_diff)
         m_MirrorTimer[FATIGUE_TIMER]+=10*time_diff;
         if (m_MirrorTimer[FATIGUE_TIMER] >= DarkWaterTime || !IsAlive())
             StopMirrorTimer(FATIGUE_TIMER);
-        else if (m_MirrorTimerFlagsLast & UNDERWARER_INDARKWATER)
+        else if (m_MirrorTimerFlagsLast & UNDERWATER_INDARKWATER)
             SendMirrorTimer(FATIGUE_TIMER, DarkWaterTime, m_MirrorTimer[FATIGUE_TIMER], 10);
     }
 
@@ -1932,7 +1882,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
         SetSemaphoreTeleportNear(true);
         // near teleport, triggering send MSG_MOVE_TELEPORT_ACK from client at landing
         if (!GetSession()->PlayerLogout())
-            SendTeleportPacket(m_teleport_dest);
+            SendTeleportPacket(m_teleport_dest, (options & TELE_TO_TRANSPORT_TELEPORT) != 0);
     }
     else
     {
@@ -2655,7 +2605,6 @@ bool Player::IsInSameRaidWith(Player const* p) const
 }
 
 ///- If the player is invited, remove him. If the group if then only 1 person, disband the group.
-/// @todo Shouldn't we also check if there is no other invitees before disbanding the group?
 void Player::UninviteFromGroup()
 {
     Group* group = GetGroupInvite();
@@ -2664,13 +2613,14 @@ void Player::UninviteFromGroup()
 
     group->RemoveInvite(this);
 
-    if (group->GetMembersCount() <= 1)                       // group has just 1 member => disband
+    if (group->IsCreated())
     {
-        if (group->IsCreated())
-        {
+        if (group->GetMembersCount() <= 1) // group has just 1 member => disband
             group->Disband(true);
-        }
-        else
+    }
+    else
+    {
+        if (group->GetInviteeCount() <= 1)
         {
             group->RemoveAllInvites();
             delete group;
@@ -2816,7 +2766,7 @@ void Player::GiveLevel(uint8 level)
     UpdateAllStats();
 
     if (sWorld->getBoolConfig(CONFIG_ALWAYS_MAXSKILL)) // Max weapon skill when leveling up
-        UpdateSkillsToMaxSkillsForLevel();
+        UpdateWeaponsSkillsToMaxSkillsForLevel();
 
     _ApplyAllLevelScaleItemMods(true);
 
@@ -3509,6 +3459,9 @@ bool Player::AddSpell(uint32 spellId, bool active, bool learning, bool dependent
 
             if (skill_max_value < new_skill_max_value)
                 skill_max_value = new_skill_max_value;
+
+            if (sWorld->getBoolConfig(CONFIG_ALWAYS_MAXSKILL) && !IsProfessionOrRidingSkill(spellLearnSkill->skill))
+                skill_value = skill_max_value;
 
             SetSkill(spellLearnSkill->skill, spellLearnSkill->step, skill_value, skill_max_value);
         }
@@ -6109,7 +6062,7 @@ void Player::UpdateSkillsForLevel()
     }
 }
 
-void Player::UpdateSkillsToMaxSkillsForLevel()
+void Player::UpdateWeaponsSkillsToMaxSkillsForLevel()
 {
     for (SkillStatusMap::iterator itr = mSkillStatus.begin(); itr != mSkillStatus.end(); ++itr)
     {
@@ -22656,6 +22609,14 @@ void Player::SendInitialPacketsAfterAddToMap()
     }
     else if (GetRaidDifficulty() != GetStoredRaidDifficulty())
         SendRaidDifficulty(GetGroup() != NULL);
+
+    if (GetPlayerSharingQuest())
+    {
+        if (Quest const* quest = sObjectMgr->GetQuestTemplate(GetSharedQuestID()))
+            PlayerTalkClass->SendQuestGiverQuestDetails(quest, GetGUID(), true);
+        else
+            ClearQuestSharingInfo();
+    }
 }
 
 void Player::SendUpdateToOutOfRangeGroupMembers()
@@ -22866,7 +22827,9 @@ void Player::LearnDefaultSkill(uint32 skillId, uint16 rank)
         {
             uint16 skillValue = 1;
             uint16 maxValue = GetMaxSkillValueForLevel();
-            if (rcInfo->Flags & SKILL_FLAG_ALWAYS_MAX_VALUE)
+            if (sWorld->getBoolConfig(CONFIG_ALWAYS_MAXSKILL) && !IsProfessionOrRidingSkill(skillId))
+                skillValue = maxValue;
+            else if (rcInfo->Flags & SKILL_FLAG_ALWAYS_MAX_VALUE)
                 skillValue = maxValue;
             else if (getClass() == CLASS_DEATH_KNIGHT)
                 skillValue = std::min(std::max<uint16>({ 1, uint16((getLevel() - 1) * 5) }), maxValue);
@@ -24113,77 +24076,52 @@ void Player::SetOriginalGroup(Group* group, int8 subgroup)
     }
 }
 
-void Player::UpdateUnderwaterState(Map* m, float x, float y, float z)
+void Player::ProcessTerrainStatusUpdate(ZLiquidStatus status, Optional<LiquidData> const& liquidData)
 {
-    LiquidData liquid_status;
-    ZLiquidStatus res = m->getLiquidStatus(x, y, z, MAP_ALL_LIQUIDS, &liquid_status);
-    if (!res)
-    {
-        m_MirrorTimerFlags &= ~(UNDERWATER_INWATER | UNDERWATER_INLAVA | UNDERWATER_INSLIME | UNDERWARER_INDARKWATER);
-        if (_lastLiquid && _lastLiquid->SpellId)
-            RemoveAurasDueToSpell(_lastLiquid->SpellId);
-
-        _lastLiquid = nullptr;
+    if (IsFlying())
         return;
-    }
 
-    if (uint32 liqEntry = liquid_status.entry)
+    // process liquid auras using generic unit code
+    Unit::ProcessTerrainStatusUpdate(status, liquidData);
+
+    // player specific logic for mirror timers
+    if (status && liquidData)
     {
-        LiquidTypeEntry const* liquid = sLiquidTypeStore.LookupEntry(liqEntry);
-        if (_lastLiquid && _lastLiquid->SpellId && _lastLiquid->Id != liqEntry)
-            RemoveAurasDueToSpell(_lastLiquid->SpellId);
-
-        if (liquid && liquid->SpellId)
+        // Breath bar state (under water in any liquid type)
+        if (liquidData->type_flags & MAP_ALL_LIQUIDS)
         {
-            if (res & (LIQUID_MAP_UNDER_WATER | LIQUID_MAP_IN_WATER))
-            {
-                if (!HasAura(liquid->SpellId))
-                    CastSpell(this, liquid->SpellId, true);
-            }
+            if (status & LIQUID_MAP_UNDER_WATER)
+                m_MirrorTimerFlags |= UNDERWATER_INWATER;
             else
-                RemoveAurasDueToSpell(liquid->SpellId);
+                m_MirrorTimerFlags &= ~UNDERWATER_INWATER;
         }
 
-        _lastLiquid = liquid;
-    }
-    else if (_lastLiquid && _lastLiquid->SpellId)
-    {
-        RemoveAurasDueToSpell(_lastLiquid->SpellId);
-        _lastLiquid = nullptr;
-    }
-
-
-    // All liquids type - check under water position
-    if (liquid_status.type_flags & (MAP_LIQUID_TYPE_WATER | MAP_LIQUID_TYPE_OCEAN | MAP_LIQUID_TYPE_MAGMA | MAP_LIQUID_TYPE_SLIME))
-    {
-        if (res & LIQUID_MAP_UNDER_WATER)
-            m_MirrorTimerFlags |= UNDERWATER_INWATER;
+        // Fatigue bar state (if not on flight path or transport)
+        if ((liquidData->type_flags & MAP_LIQUID_TYPE_DARK_WATER) && !IsInFlight() && !GetTransport())
+            m_MirrorTimerFlags |= UNDERWATER_INDARKWATER;
         else
-            m_MirrorTimerFlags &= ~UNDERWATER_INWATER;
-    }
+            m_MirrorTimerFlags &= ~UNDERWATER_INDARKWATER;
 
-    // Allow travel in dark water on taxi or transport
-    if ((liquid_status.type_flags & MAP_LIQUID_TYPE_DARK_WATER) && !IsInFlight() && !GetTransport())
-        m_MirrorTimerFlags |= UNDERWARER_INDARKWATER;
+        // Lava state (any contact)
+        if (liquidData->type_flags & MAP_LIQUID_TYPE_MAGMA)
+        {
+            if (status & MAP_LIQUID_STATUS_IN_CONTACT)
+                m_MirrorTimerFlags |= UNDERWATER_INLAVA;
+            else
+                m_MirrorTimerFlags &= ~UNDERWATER_INLAVA;
+        }
+        
+        // Slime state (any contact)
+        if (liquidData->type_flags & MAP_LIQUID_TYPE_SLIME)
+        {
+            if (status & MAP_LIQUID_STATUS_IN_CONTACT)
+                m_MirrorTimerFlags |= UNDERWATER_INSLIME;
+            else
+                m_MirrorTimerFlags &= ~UNDERWATER_INSLIME;
+        }
+    }
     else
-        m_MirrorTimerFlags &= ~UNDERWARER_INDARKWATER;
-
-    // in lava check, anywhere in lava level
-    if (liquid_status.type_flags & MAP_LIQUID_TYPE_MAGMA)
-    {
-        if (res & (LIQUID_MAP_UNDER_WATER | LIQUID_MAP_IN_WATER | LIQUID_MAP_WATER_WALK))
-            m_MirrorTimerFlags |= UNDERWATER_INLAVA;
-        else
-            m_MirrorTimerFlags &= ~UNDERWATER_INLAVA;
-    }
-    // in slime check, anywhere in slime level
-    if (liquid_status.type_flags & MAP_LIQUID_TYPE_SLIME)
-    {
-        if (res & (LIQUID_MAP_UNDER_WATER | LIQUID_MAP_IN_WATER | LIQUID_MAP_WATER_WALK))
-            m_MirrorTimerFlags |= UNDERWATER_INSLIME;
-        else
-            m_MirrorTimerFlags &= ~UNDERWATER_INSLIME;
-    }
+        m_MirrorTimerFlags &= ~(UNDERWATER_INWATER | UNDERWATER_INLAVA | UNDERWATER_INSLIME | UNDERWATER_INDARKWATER);
 }
 
 void Player::SetCanParry(bool value)
@@ -24930,7 +24868,25 @@ InventoryResult Player::CanEquipUniqueItem(ItemTemplate const* itemProto, uint8 
 
 void Player::SetFallInformation(uint32 time, float z)
 {
-    m_lastFallTime = time;
+    if (time < m_lastFallTimeClient)
+        m_fallStartTimeServer = GameTime::GetGameTimeMS() - time;
+    else if (m_fallStartTimeServer && time < std::max<uint32>(GameTime::GetGameTimeMS() - m_fallStartTimeServer, 2500) - 2500)
+    {
+        TC_LOG_WARN("cheat", "Player %s found to be delaying their falling movement.", GetName().c_str());
+        switch (sWorld->getIntConfig(CONFIG_ANTICHEAT_FALL_PUNISHMENT))
+        {
+            case 1: // kill
+                EnvironmentalDamage(DAMAGE_FALL, GetMaxHealth());
+                if (!isDead())
+                    Kill(this, false);
+                break;
+            case 2: // disconnect
+                GetSession()->KickPlayer();
+                break;
+        }
+    }
+
+    m_lastFallTimeClient = time;
     m_lastFallZ = z;
 }
 
@@ -24938,6 +24894,22 @@ void Player::HandleFall(MovementInfo const& movementInfo)
 {
     // calculate total z distance of the fall
     float z_diff = m_lastFallZ - movementInfo.pos.GetPositionZ();
+    if (m_fallStartTimeServer && movementInfo.fallTime < std::max<uint32>(GameTime::GetGameTimeMS() - m_fallStartTimeServer, 2500) - 2500)
+    {
+        TC_LOG_WARN("cheat", "Player %s found to be delaying their falling movement.", GetName().c_str());
+        switch (sWorld->getIntConfig(CONFIG_ANTICHEAT_FALL_PUNISHMENT))
+        {
+            case 1: // kill
+                z_diff = MAX_HEIGHT;
+                break;
+            case 2: // disconnect
+                GetSession()->KickPlayer();
+                break;
+            default:
+                break;
+        }
+    }
+    m_fallStartTimeServer = 0;
     //TC_LOG_DEBUG("zDiff = %f", z_diff);
 
     //Players with low fall distance, Feather Fall or physical immunity (charges used) are ignored
@@ -25267,7 +25239,7 @@ void Player::AddKnownCurrency(uint32 itemId)
 
 void Player::UpdateFallInformationIfNeed(MovementInfo const& minfo, uint16 opcode)
 {
-    if (m_lastFallTime >= minfo.fallTime || m_lastFallZ <= minfo.pos.GetPositionZ() || opcode == MSG_MOVE_FALL_LAND)
+    if (m_lastFallTimeClient >= minfo.fallTime || m_lastFallZ <= minfo.pos.GetPositionZ() || opcode == MSG_MOVE_FALL_LAND)
         SetFallInformation(minfo.fallTime, minfo.pos.GetPositionZ());
 }
 

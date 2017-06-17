@@ -1349,6 +1349,12 @@ void World::LoadConfigSettings(bool reload)
     // Allow to cache data queries
     m_bool_configs[CONFIG_CACHE_DATA_QUERIES] = sConfigMgr->GetBoolDefault("CacheDataQueries", true);
 
+    // Whether to use LoS from game objects
+    m_bool_configs[CONFIG_CHECK_GOBJECT_LOS] = sConfigMgr->GetBoolDefault("CheckGameObjectLoS", true);
+
+    // What happens with cheaters that delay their fall
+    m_int_configs[CONFIG_ANTICHEAT_FALL_PUNISHMENT] = sConfigMgr->GetIntDefault("Anticheat.FallDelayed", 1); // 1 - kill
+
     // call ScriptMgr if we're reloading the configuration
     if (reload)
         sScriptMgr->OnConfigLoad(reload);
@@ -1439,6 +1445,9 @@ void World::SetInitialWorldSettings()
 
     TC_LOG_INFO("server.loading", "Initializing PlayerDump tables...");
     PlayerDump::InitializeTables();
+
+    ///- Initialize static helper structures
+    AIRegistry::Initialize();
 
     TC_LOG_INFO("server.loading", "Loading SpellInfo store...");
     sSpellMgr->LoadSpellInfoStore();
@@ -1901,9 +1910,6 @@ void World::SetInitialWorldSettings()
                                                             //1440
     mail_timer_expires = ((DAY * IN_MILLISECONDS) / (m_timers[WUPDATE_AUCTIONS].GetInterval()));
     TC_LOG_INFO("server.loading", "Mail timer set to: " UI64FMTD ", mail return is called every " UI64FMTD " minutes", uint64(mail_timer), uint64(mail_timer_expires));
-
-    ///- Initilize static helper structures
-    AIRegistry::Initialize();
 
     ///- Initialize MapManager
     TC_LOG_INFO("server.loading", "Starting Map System");
